@@ -60,7 +60,7 @@ class ChinaStockDownloader(object):
             return pd.read_csv(path)
 
         fields = "date,code,open,high,low,close,amount"
-        columns = ["date", "tic", "open", "high", "low", "close", "amount"]
+        columns = config.PRICE_DF_COLUMNS
 
         lg = bs.login()
         result_list = []
