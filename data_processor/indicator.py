@@ -14,7 +14,6 @@ def add_tech_indicator(df: pd.DataFrame) -> pd.DataFrame:
         close = tic_df["close"]
         volume = tic_df["amount"]
 
-        tic_df["SMA_5"] = talib.SMA(close, timeperiod=5)
         tic_df["SMA_20"] = talib.SMA(close, timeperiod=20)
         tic_df["SMA_60"] = talib.SMA(close, timeperiod=60)
         tic_df["SMA_120"] = talib.SMA(close, timeperiod=120)
@@ -24,6 +23,7 @@ def add_tech_indicator(df: pd.DataFrame) -> pd.DataFrame:
         _, _, tic_df["macdhist"] = talib.MACD(
             close, fastperiod=12, slowperiod=26, signalperiod=9
         )
+        tic_df["CCI"] = talib.CCI(close, timeperiod=14)
         tic_df["RSI"] = talib.RSI(close, timeperiod=14)
         tic_df["NATR"] = talib.NATR(high, low, close, timeperiod=14)
         tic_df["ADOSC"] = talib.ADOSC(
@@ -38,4 +38,30 @@ def add_tech_indicator(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def add_fundamental_data(price_df: pd.DataFrame, fund_df: pd.DataFrame) -> pd.DataFrame:
-    ;
+    tics = price_df["tic"].unique().tolist()
+    df_list = []
+    for tic in tics:
+        tic_price = price_df[price_df["tic"] == tic].reset_index(drop=True)
+        tic_fund = fund_df[fund_df["tic"] == tic].reset_index(drop=True)
+        tic_price["date"] = pd.to_datetime(tic_price["date"])
+        tic_fund["date"] = pd.to_datetime(tic_fund["date"])
+
+        tic_fund = tic_fund.drop_duplicates("date", keep="last", ignore_index=True)
+
+        list_date = list(
+            pd.date_range(tic_price["date"].min(), tic_price["date"].max())
+        )
+        process = pd.DataFrame({"date": list_date, "tic": tic}).merge(
+            tic_price, on=["date", "tic"], how="left"
+        )
+        process = process.merge(tic_fund, how="left", on=["date", "tic"])
+
+        for col in ["ROE", "AssetStoEquity", "Pnitoni", "Nitogr", "TaxBurden"]:
+            process[col] = process[col].ffill()
+
+        process.dropna(how="any", inplace=True)
+        df_list.append(process)
+
+    result_df = pd.concat(df_list).sort_values(["date", "tic"], ignore_index=True)
+
+    return result_df

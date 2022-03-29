@@ -53,7 +53,7 @@ class ChinaStockDownloader(object):
             pandas.DataFrame: Price df
         """
         if path is None:
-            path = f"./data/{self.index}_{self.start_date}~{self.end_date}.csv"
+            path = f"./data/{self.index}_{self.start_date}~{self.end_date}_price.csv"
 
         if os.path.exists(path) and not force_download:
             print("Load from downloaded data")
@@ -95,7 +95,7 @@ class ChinaStockDownloader(object):
 
         return df
 
-    def download_fundament(self) -> pd.DataFrame:
+    def download_fundament(self, force_download=False) -> pd.DataFrame:
         """Download fundamental data
          Reference: http://baostock.com/baostock/index.php/%E5%AD%A3%E9%A2%91%E6%9D%9C%E9%82%A6%E6%8C%87%E6%95%B0
 
@@ -103,6 +103,12 @@ class ChinaStockDownloader(object):
              pd.DataFrame: columns = ['tic', 'date', 'ROE', 'AssetStoEquity', 'Pnitoni', 'Nitogr',
         'TaxBurden']
         """
+        path = f"./data/{self.index}_{self.start_date}~{self.end_date}_fund.csv"
+
+        if os.path.exists(path) and not force_download:
+            print("Load from downloaded data")
+            return pd.read_csv(path)
+
         drop_list = ["statDate", "dupontAssetTurn", "dupontIntburden", "dupontEbittogr"]
         rename_dict = {
             "code": "tic",
@@ -134,6 +140,8 @@ class ChinaStockDownloader(object):
             .rename(columns=rename_dict)
             .drop(columns=drop_list)
         )
+
+        df.to_csv(path, index=False)
 
         return df
 
