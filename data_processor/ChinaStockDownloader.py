@@ -34,7 +34,7 @@ class ChinaStockDownloader(object):
 
     def download_price(
         self,
-        to_csv=True,
+        to_csv=False,
         path=None,
         force_download=False,
         frequency="d",
@@ -59,7 +59,9 @@ class ChinaStockDownloader(object):
             print("Load from downloaded data")
             return pd.read_csv(path)
 
-        fields = "date,code,open,high,low,close,amount"
+        fields = (
+            "date,code,open,high,low,close,volume,amount,peTTM,pbMRQ,psTTM,pcfNcfTTM"
+        )
         columns = config.PRICE_DF_COLUMNS
 
         lg = bs.login()
@@ -87,8 +89,7 @@ class ChinaStockDownloader(object):
         df = pd.concat(result_list, ignore_index=True).sort_values(
             ["date", "tic"], ignore_index=True
         )
-        for col in ["open", "high", "low", "close", "amount"]:
-            df[col] = df[col].astype(float)
+        df = df.apply(pd.to_numeric, errors="ignore")
 
         if to_csv:
             df.to_csv(path, index=False)
@@ -141,8 +142,6 @@ class ChinaStockDownloader(object):
             .drop(columns=drop_list)
         )
 
-        df.to_csv(path, index=False)
-
         return df
 
     def _query_constituent_list(self) -> list:
@@ -156,6 +155,24 @@ class ChinaStockDownloader(object):
 
         bs.logout()
         return result
+
+
+def single_stock_query(start_date, end_date, code, freq="d"):
+    fields = "date,code,open,high,low,close,volume,amount,peTTM,pbMRQ,psTTM,pcfNcfTTM"
+    columns = config.PRICE_DF_COLUMNS
+
+    lg = bs.login()
+    rs = bs.query_history_k_data_plus(
+        code, fields, start_date, end_date, frequency=freq
+    )
+    data_list = []
+    while (rs.error_code == "0") & rs.next():
+        data_list.append(rs.get_row_data())
+    result = pd.DataFrame(data_list, columns=columns)
+
+    bs.logout()
+
+    return result
 
 
 if __name__ == "__main__":

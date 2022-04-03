@@ -12,18 +12,18 @@ def add_tech_indicator(df: pd.DataFrame) -> pd.DataFrame:
         high = tic_df["high"]
         low = tic_df["low"]
         close = tic_df["close"]
-        volume = tic_df["amount"]
+        volume = tic_df["volume"]
 
         tic_df["SMA_20"] = talib.SMA(close, timeperiod=20)
         tic_df["SMA_60"] = talib.SMA(close, timeperiod=60)
         tic_df["SMA_120"] = talib.SMA(close, timeperiod=120)
-        tic_df["BBANDS_UPP"], tic_df["BBANDS_MID"], tic_df["BBANDS_LOW"] = talib.BBANDS(
-            close, timeperiod=5, nbdevup=2, nbdevdn=2, matype=0
-        )
+        # tic_df["BBANDS_UPP"], tic_df["BBANDS_MID"], tic_df["BBANDS_LOW"] = talib.BBANDS(
+        #     close, timeperiod=5, nbdevup=2, nbdevdn=2, matype=0
+        # )
         _, _, tic_df["macdhist"] = talib.MACD(
             close, fastperiod=12, slowperiod=26, signalperiod=9
         )
-        tic_df["CCI"] = talib.CCI(close, timeperiod=14)
+        tic_df["CCI"] = talib.CCI(high, low, close, timeperiod=14)
         tic_df["RSI"] = talib.RSI(close, timeperiod=14)
         tic_df["NATR"] = talib.NATR(high, low, close, timeperiod=14)
         tic_df["ADOSC"] = talib.ADOSC(
@@ -65,3 +65,9 @@ def add_fundamental_data(price_df: pd.DataFrame, fund_df: pd.DataFrame) -> pd.Da
     result_df = pd.concat(df_list).sort_values(["date", "tic"], ignore_index=True)
 
     return result_df
+
+
+def add_all_indicators(price_df: pd.DataFrame, fund_df: pd.DataFrame) -> pd.DataFrame:
+    price_df = add_tech_indicator(price_df)
+    result = add_fundamental_data(price_df, fund_df)
+    return result
