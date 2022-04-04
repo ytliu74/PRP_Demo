@@ -64,7 +64,7 @@ if __name__ == "__main__":
     env_train, _ = e_train_gym.get_sb_env()
 
     # SAC
-    if algo == "SAC":
+    if algo == "sac":
         agent = DRLAgent(env=env_train)
         SAC_PARAMS = {
             "batch_size": 128,
@@ -81,7 +81,7 @@ if __name__ == "__main__":
         model = trained_sac
 
     # DDPG
-    if algo == "DDPG":
+    if algo == "ddpg":
         DDPG_PARAMS = {
             "batch_size": 128,
             "buffer_size": 100000,
