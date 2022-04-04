@@ -55,3 +55,23 @@ PRICE_DF_COLUMNS = [
     "psTTM",
     "pcfNcfTTM",
 ]
+
+INDICATORS = [
+    "peTTM",
+    "pbMRQ",
+    "psTTM",
+    "pcfNcfTTM",
+    "SMA_20",
+    "SMA_60",
+    "SMA_120",
+    "macdhist",
+    "CCI",
+    "RSI",
+    "NATR",
+    "ADOSC",
+    "ROE",
+    "AssetStoEquity",
+    "Pnitoni",
+    "Nitogr",
+    "TaxBurden",
+]
