@@ -46,19 +46,19 @@ if __name__ == "__main__":
     print(f"stock_dimension: {stock_dimension}, state_space: {state_space}")
 
     env_kwargs = {
-        "hmax": 100,
-        # initial_amount = 1000000, and hold no shares at beginning.
-        "initial_list": [10000000] + [0 for i in range(stock_dimension)],
-        # buy and sell cost for each stock
-        "buy_cost_pct": [0.001] * stock_dimension,
-        "sell_cost_pct": [0.001] * stock_dimension,
-        "state_space": state_space,
-        "stock_dim": stock_dimension,
-        "tech_indicator_list": indicators,
-        "action_space": stock_dimension,
-        "reward_scaling": 1e-4,
+    "hmax": 100,
+    "initial_amount" : 1000000,
+    # "initial_list": [10000000] + [0 for i in range(stock_dimension)],
+    # buy and sell cost for each stock
+    "num_stock_shares" : [0] * stock_dimension,
+    "buy_cost_pct": [0.001] * stock_dimension,
+    "sell_cost_pct": [0.001] * stock_dimension,
+    "state_space": state_space,
+    "stock_dim": stock_dimension,
+    "tech_indicator_list": indicators,
+    "action_space": stock_dimension,
+    "reward_scaling": 1e-4,
     }
-
     e_train_gym = StockTradingEnv(df=train, **env_kwargs)
 
     env_train, _ = e_train_gym.get_sb_env()
