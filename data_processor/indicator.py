@@ -71,3 +71,9 @@ def add_all_indicators(price_df: pd.DataFrame, fund_df: pd.DataFrame) -> pd.Data
     price_df = add_tech_indicator(price_df)
     result = add_fundamental_data(price_df, fund_df)
     return result
+
+
+def tech_indicator_only(price_df: pd.DataFrame) -> pd.DataFrame:
+    price_df = price_df.drop(columns=["peTTM", "pbMRQ", "psTTM", "pcfNcfTTM"])
+    price_df["date"] = pd.to_datetime(price_df["date"])
+    return add_tech_indicator(price_df)
