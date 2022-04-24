@@ -33,6 +33,7 @@ def add_tech_indicator(df: pd.DataFrame) -> pd.DataFrame:
         df_list.append(tic_df)
 
     result_df = pd.concat(df_list).sort_values(["date", "tic"], ignore_index=True)
+    result_df["date"] = pd.to_datetime(result_df["date"])
 
     return result_df
 

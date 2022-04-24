@@ -44,3 +44,14 @@ INDICATORS = [
     "Nitogr",
     "TaxBurden",
 ]
+
+TECH_INDICATORS = [
+    "SMA_20",
+    "SMA_60",
+    "SMA_120",
+    "macdhist",
+    "CCI",
+    "RSI",
+    "NATR",
+    "ADOSC",
+]
