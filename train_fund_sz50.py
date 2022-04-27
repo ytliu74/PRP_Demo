@@ -1,3 +1,4 @@
+from re import A
 import pandas as pd
 import numpy as np
 import matplotlib
@@ -24,17 +25,22 @@ import data_processor.config
 from data_processor.ChinaStockDownloader import single_stock_query
 import quantstats as qs
 
-if __name__ == "__main__":
-    algo = sys.argv[1]
+# if __name__ == "__main__":
+#     algo = sys.argv[1]
+#     cuda = sys.argv[2]
 
-    if not os.path.exists("./" + config.DATA_SAVE_DIR):
-        os.makedirs("./" + config.DATA_SAVE_DIR)
-    if not os.path.exists("./" + config.TRAINED_MODEL_DIR):
-        os.makedirs("./" + config.TRAINED_MODEL_DIR)
+
+def train_fund_sz50(algo, tensorboard_log=False, cuda=0, timesteps=100000):
+
     if not os.path.exists("./" + config.TENSORBOARD_LOG_DIR):
         os.makedirs("./" + config.TENSORBOARD_LOG_DIR)
-    if not os.path.exists("./" + config.RESULTS_DIR):
-        os.makedirs("./" + config.RESULTS_DIR)
+    if not os.path.exists("./" + "results"):
+        os.makedirs("./" + "results")
+
+    if tensorboard_log:
+        log = config.TENSORBOARD_LOG_DIR
+    else:
+        log = None
 
     price_df = pd.read_parquet("./data/sz50_price.parquet")
     fund_df = pd.read_parquet("./data/sz50_fundament.parquet")
@@ -89,49 +95,69 @@ if __name__ == "__main__":
             "learning_rate": 0.00005,
             "learning_starts": 100,
             "ent_coef": "auto_0.1",
+            "device": f"cuda:{cuda}",
         }
 
-        model_sac = agent.get_model(
-            "sac", model_kwargs=SAC_PARAMS, tensorboard_log=config.TENSORBOARD_LOG_DIR
-        )
+        model_sac = agent.get_model("sac", model_kwargs=SAC_PARAMS, tensorboard_log=log)
         trained_sac = agent.train_model(
-            model=model_sac, tb_log_name="sac", total_timesteps=300000
+            model=model_sac, tb_log_name="sac", total_timesteps=timesteps
         )
         model = trained_sac
 
     # DDPG
     if algo == "ddpg":
         DDPG_PARAMS = {
-            "batch_size": 128,
-            "buffer_size": 100000,
+            "batch_size": 256,
+            "buffer_size": 10000,
             "learning_rate": 0.0001,
+            "device": f"cuda:{cuda}",
         }
 
         agent = DRLAgent(env=env_train)
         model_ddpg = agent.get_model(
-            "ddpg", model_kwargs=DDPG_PARAMS, tensorboard_log=config.TENSORBOARD_LOG_DIR
+            "ddpg", model_kwargs=DDPG_PARAMS, tensorboard_log=log
         )
 
         trained_ddpg = agent.train_model(
-            model=model_ddpg, tb_log_name="ddpg", total_timesteps=200000
+            model=model_ddpg, tb_log_name="ddpg", total_timesteps=timesteps
         )
         model = trained_ddpg
 
     # Backtest
     e_trade_gym = StockTradingEnv(df=trade, **env_kwargs)
+    e_train_gym = StockTradingEnv(df=train, **env_kwargs)
 
-    df_account_value, df_actions = DRLAgent.DRL_prediction(
+    trade_account_value, _ = DRLAgent.DRL_prediction(
         model=model, environment=e_trade_gym
     )
 
-    df_account_value.to_csv("./results/{algo}_sz50.csv")
+    train_account_value, _ = DRLAgent.DRL_prediction(
+        model=model, environment=e_train_gym
+    )
 
-    test_ret = get_daily_return(df_account_value)
+    trade_perf = backtest_stats(account_value=trade_account_value)
+    train_perf = backtest_stats(account_value=train_account_value)
 
-    test_ret.index = pd.DatetimeIndex(test_ret.index.date)
+    ret = {
+        "train_ret": train_perf.loc["Cumulative returns"],
+        "trade_ret": trade_perf.loc["Cumulative returns"],
+    }
 
-    print("==============Get Backtest Results===========")
-    now = datetime.datetime.now().strftime("%Y%m%d-%Hh%M")
+    return ret
 
-    perf_stats_all = backtest_stats(account_value=df_account_value)
-    perf_stats_all = pd.DataFrame(perf_stats_all)
+
+if __name__ == "__main__":
+    cuda = sys.argv[1]
+    result_list = []
+
+    for timesteps in [i * 40000 for i in range(1, 16)]:
+        # 40000 ~ 600000
+        for iter in range(20):
+            print("--------------------")
+            print(f"timesteps: {timesteps},iteration: {iter}")
+            ret = train_fund_sz50("ddpg", cuda=cuda, timesteps=timesteps)
+            ret["timesteps"] = timesteps
+            result_list.append(ret)
+
+    result = pd.DataFrame(result_list, columns=["timesteps", "train_ret", "trade_ret"])
+    result.to_csv("./results/ret_on_time.csv")
