@@ -58,7 +58,7 @@ def train_fund_sz50(algo, tensorboard_log=False, cuda=0, timesteps=100000):
 
     df = pd.concat(tmp_list, ignore_index=True)
 
-    train = data_split(df, "2009-01-01", "2020-01-01")
+    train = data_split(df, "2014-01-01", "2020-01-01")
     trade = data_split(df, "2020-01-01", "2022-01-01")
 
     indicators = data_processor.config.INDICATORS
@@ -108,7 +108,7 @@ def train_fund_sz50(algo, tensorboard_log=False, cuda=0, timesteps=100000):
     if algo == "ddpg":
         DDPG_PARAMS = {
             "batch_size": 256,
-            "buffer_size": 10000,
+            "buffer_size": 1000000,
             "learning_rate": 0.0001,
             "device": f"cuda:{cuda}",
         }
@@ -150,9 +150,9 @@ if __name__ == "__main__":
     cuda = sys.argv[1]
     result_list = []
 
-    for timesteps in [i * 40000 for i in range(1, 16)]:
-        # 40000 ~ 600000
-        for iter in range(20):
+    for timesteps in [i * 50000 for i in range(1, 11)]:
+        # 50000 ~ 500000
+        for iter in range(5):
             print("--------------------")
             print(f"timesteps: {timesteps},iteration: {iter}")
             ret = train_fund_sz50("ddpg", cuda=cuda, timesteps=timesteps)
