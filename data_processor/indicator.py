@@ -47,6 +47,7 @@ def add_fundamental_data(price_df: pd.DataFrame, fund_df: pd.DataFrame) -> pd.Da
         tic_price["date"] = pd.to_datetime(tic_price["date"])
         tic_fund["date"] = pd.to_datetime(tic_fund["date"])
 
+        # sometimes 2 diffferent reports at the same date.
         tic_fund = tic_fund.drop_duplicates("date", keep="last", ignore_index=True)
 
         list_date = list(
