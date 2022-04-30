@@ -1,4 +1,6 @@
-# DRL models from ElegantRL: https://github.com/AI4Finance-Foundation/ElegantRL
+import pandas as pd
+import numpy as np
+
 import torch
 from elegantrl.agents import AgentDDPG
 from elegantrl.agents import AgentPPO
@@ -89,28 +91,32 @@ class CryptoDRLAgent:
         _torch = torch
         state = environment.reset()
         episode_returns = []  # the cumulative_return / initial_account
-        episode_total_assets = [environment.initial_total_asset]
+        actions = []
+        episode_total_assets = [environment.initial_cash]
         with _torch.no_grad():
             for i in range(environment.max_step):
-                s_tensor = _torch.as_tensor((state,), device=device)
+                s_tensor = _torch.as_tensor(np.array((state,)), device=device)
                 a_tensor = act(s_tensor)  # action_tanh = act.forward()
-                action = (
-                    a_tensor.detach().cpu().numpy()[0]
-                )  # not need detach(), because with torch.no_grad() outside
+                action = a_tensor.cpu().numpy()[0]
+                actions.append(action)
+
                 state, reward, done, _ = environment.step(action)
 
                 total_asset = (
-                    environment.amount
+                    environment.cash
                     + (
-                        environment.price_ary[environment.day] * environment.stocks
+                        environment.price_array[environment.time] * environment.stocks
                     ).sum()
                 )
                 episode_total_assets.append(total_asset)
-                episode_return = total_asset / environment.initial_total_asset
+                episode_return = total_asset / environment.initial_cash
                 episode_returns.append(episode_return)
                 if done:
                     break
         print("Test Finished!")
         # return episode total_assets on testing data
         print("episode_return", episode_return)
-        return episode_total_assets
+        result_df = pd.DataFrame()
+        result_df["date"] = environment.trading_date[1:]
+        result_df["account_value"] = episode_total_assets
+        return result_df, actions

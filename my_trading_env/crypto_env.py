@@ -16,7 +16,7 @@ class CryptoEnv:
         buy_cost_pct=1e-3,
         sell_cost_pct=1e-3,
         ma_ratio=0.99,
-        reward_scaler=1e-4,
+        reward_scaler=1e-3,
     ):
         """Multi crypto trading environment
 
@@ -42,6 +42,7 @@ class CryptoEnv:
         self.ma_ratio = ma_ratio
         self.reward_scaler = reward_scaler
         self.crypto_num = len(data_df["tic"].unique())
+        self.trading_date = data_df["date"].unique()
         self.stocks = np.zeros(self.crypto_num, dtype=np.float32)
 
         self.price_array, self.tech_array = self._df_to_time_array(data_df)
@@ -51,8 +52,12 @@ class CryptoEnv:
 
         """env information"""
         self.env_name = "MY_MulticryptoEnv"
-        # cash + (holdings + price) + tech
-        self.state_dim = 1 + (self.crypto_num * 2 + self.tech_array.shape[1]) * lookback
+        # cash + holdings + (price + tech) * lookback
+        self.state_dim = (
+            1
+            + self.crypto_num
+            + (self.crypto_num * 1 + self.tech_array.shape[1]) * lookback
+        )
         self.action_dim = self.crypto_num
         self.if_discrete = False
         self.target_return = 10
@@ -122,14 +127,18 @@ class CryptoEnv:
         state = np.hstack(
             (
                 self.cash * self.cash_norm,
-                self.price_array[self.time] * self.price_norm_vector,
                 self.stocks,
             )
         )
         for i in range(self.lookback):
+            price_i = self.price_array[self.time - i]
             tech_i = self.tech_array[self.time - i]
+            normalized_price_i = price_i * self.price_norm_vector
             normalized_tech_i = tech_i * self.tech_norm_vector
-            state = np.hstack((state, normalized_tech_i)).astype(np.float32)
+
+            state = np.hstack((state, normalized_price_i, normalized_tech_i)).astype(
+                np.float32
+            )
 
         return state
 
