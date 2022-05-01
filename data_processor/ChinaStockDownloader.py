@@ -38,7 +38,7 @@ class ChinaStockDownloader(object):
         path=None,
         force_download=False,
         frequency="d",
-        adjust_flag="3",
+        adjust_flag="1",
     ) -> pd.DataFrame:
         """Download price data
 

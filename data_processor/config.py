@@ -1,10 +1,12 @@
 import datetime
+import data_processor.ticker_list as ticker_list
 
 QUERY_FROM_BAOSTOCK_INDEX = ["sz50", "hs300", "zz500"]
 
-APPENDED_INDEX = ["SZ", "GEM", "TEST", "trainable_sz50_2009"]
+APPENDED_INDEX = ["SZ", "GEM", "TEST", "TICKER_LIST_590"]
 
 TEST = ["sh.600000", "sh.600028", "sh.600030", "sh.600031"]
+TICKER_LIST_590 = ticker_list.TICKER_LIST_590
 
 FIRST_DAY_OF_2009 = datetime.datetime(2009, 1, 5)
 FIRST_DAY_OF_2011 = datetime.datetime(2011, 1, 4)
