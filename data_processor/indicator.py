@@ -60,6 +60,7 @@ def add_fundamental_data(price_df: pd.DataFrame, fund_df: pd.DataFrame) -> pd.Da
 
         for col in ["ROE", "AssetStoEquity", "Pnitoni", "Nitogr", "TaxBurden"]:
             process[col] = process[col].ffill()
+            process[col] = pd.to_numeric(process[col])
 
         process.dropna(how="any", inplace=True)
         df_list.append(process)
