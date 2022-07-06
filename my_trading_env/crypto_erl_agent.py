@@ -6,14 +6,23 @@ from elegantrl.agents import AgentDDPG
 from elegantrl.agents import AgentPPO
 from elegantrl.agents import AgentSAC
 from elegantrl.agents import AgentTD3
+from elegantrl.agents import AgentSAC_H
+from elegantrl.agents import AgentPPO_H
 from elegantrl.train.config import Arguments
 
 # from elegantrl.agents import AgentA2C
 from elegantrl.train.run import train_and_evaluate, init_agent
 
-MODELS = {"ddpg": AgentDDPG, "td3": AgentTD3, "sac": AgentSAC, "ppo": AgentPPO}
-OFF_POLICY_MODELS = ["ddpg", "td3", "sac"]
-ON_POLICY_MODELS = ["ppo"]
+MODELS = {
+    "ddpg": AgentDDPG,
+    "td3": AgentTD3,
+    "sac": AgentSAC,
+    "ppo": AgentPPO,
+    "sac_h": AgentSAC_H,
+    "ppo_h": AgentPPO_H,
+}
+OFF_POLICY_MODELS = ["ddpg", "td3", "sac", "sac_h"]
+ON_POLICY_MODELS = ["ppo", "ppo_h"]
 """MODEL_KWARGS = {x: config.__dict__[f"{x.upper()}_PARAMS"] for x in MODELS.keys()}
 
 NOISE = {
@@ -71,12 +80,12 @@ class CryptoDRLAgent:
         train_and_evaluate(model)
 
     @staticmethod
-    def DRL_prediction(model_name, cwd, net_dimension, environment):
+    def DRL_prediction(model_name, cwd, net_dimension, env):
         if model_name not in MODELS:
             raise NotImplementedError("NotImplementedError")
         agent = MODELS[model_name]
-        environment.env_num = 1
-        args = Arguments(agent=agent, env=environment)
+        env.env_num = 1
+        args = Arguments(agent=agent, env=env)
         args.cwd = cwd
         args.net_dim = net_dimension
         # load agent
@@ -89,27 +98,22 @@ class CryptoDRLAgent:
 
         # test on the testing env
         _torch = torch
-        state = environment.reset()
+        state = env.reset()
         episode_returns = []  # the cumulative_return / initial_account
         actions = []
-        episode_total_assets = [environment.initial_cash]
+        episode_total_assets = [env.initial_cash]
         with _torch.no_grad():
-            for i in range(environment.max_step):
+            for i in range(env.max_step):
                 s_tensor = _torch.as_tensor(np.array((state,)), device=device)
                 a_tensor = act(s_tensor)  # action_tanh = act.forward()
                 action = a_tensor.cpu().numpy()[0]
                 actions.append(action)
 
-                state, reward, done, _ = environment.step(action)
+                state, reward, done, _ = env.step(action)
 
-                total_asset = (
-                    environment.cash
-                    + (
-                        environment.price_array[environment.time] * environment.stocks
-                    ).sum()
-                )
+                total_asset = env.cash + (env.price_array[env.time] * env.stocks).sum()
                 episode_total_assets.append(total_asset)
-                episode_return = total_asset / environment.initial_cash
+                episode_return = total_asset / env.initial_cash
                 episode_returns.append(episode_return)
                 if done:
                     break
@@ -117,6 +121,6 @@ class CryptoDRLAgent:
         # return episode total_assets on testing data
         print("episode_return", episode_return)
         result_df = pd.DataFrame()
-        result_df["date"] = environment.trading_date[1:]
+        result_df["date"] = env.trading_date[env.lookback + 1:]
         result_df["account_value"] = episode_total_assets
         return result_df, actions

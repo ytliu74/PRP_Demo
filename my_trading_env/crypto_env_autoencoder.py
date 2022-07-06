@@ -1,7 +1,9 @@
 import math
+import torch
+import torch.nn as nn
 import numpy as np
 import pandas as pd
-from sklearn import preprocessing
+from my_trading_env.auto_encoder import Autoencoder
 
 
 class CryptoEnv:
@@ -18,6 +20,8 @@ class CryptoEnv:
         sell_cost_pct=1e-3,
         ma_ratio=0.99,
         reward_scaler=1e-3,
+        encoded_dim=32,
+        lr = 1e-3
     ):
         """Multi crypto trading environment
 
@@ -42,6 +46,8 @@ class CryptoEnv:
         self.max_stock = 1
         self.ma_ratio = ma_ratio
         self.reward_scaler = reward_scaler
+        self.encoded_dim = encoded_dim
+        self.lr = lr
         self.crypto_num = len(data_df["tic"].unique())
         self.trading_date = data_df["date"].unique()
         self.stocks = np.zeros(self.crypto_num, dtype=np.float32)
@@ -64,7 +70,7 @@ class CryptoEnv:
         self.target_return = 10
 
     def reset(self) -> np.ndarray:
-        self.time = self.lookback
+        self.time = self.lookback - 1
         self.cash = self.initial_cash  # reset()
         self.total_asset = self.initial_cash
         self.stocks = np.zeros(self.crypto_num, dtype=np.float32)
@@ -115,7 +121,7 @@ class CryptoEnv:
         done = self.time == self.max_step
         state = self.get_state()
         next_total_asset = self.cash + (self.stocks * self.price_array[self.time]).sum()
-        reward = (next_total_asset - self.initial_cash) * self.reward_scaler
+        reward = (next_total_asset - self.total_asset) * self.reward_scaler
         self.total_asset = next_total_asset
         self.return_ma = self.return_ma * self.ma_ratio + reward
         self.cumu_return = self.total_asset / self.initial_cash
@@ -125,16 +131,21 @@ class CryptoEnv:
         return state, reward, done, None
 
     def get_state(self):
-        state = np.hstack((self.cash * self.cash_norm, self.stocks))
+        state = np.hstack(
+            (
+                self.cash * self.cash_norm,
+                self.stocks,
+            )
+        )
+        for i in range(self.lookback):
+            price_i = self.price_array[self.time - i]
+            tech_i = self.tech_array[self.time - i]
+            normalized_price_i = price_i * self.price_norm_vector
+            normalized_tech_i = tech_i * self.tech_norm_vector
 
-        price_normed = preprocessing.scale(
-            self.price_array[self.time - self.lookback: self.time], axis=0
-        ).flatten()
-        tech_normed = preprocessing.scale(
-            self.tech_array[self.time - self.lookback: self.time], axis=0
-        ).flatten()
-
-        state = np.hstack((state, price_normed, tech_normed)).astype(np.float32)
+            state = np.hstack((state, normalized_price_i, normalized_tech_i)).astype(
+                np.float32
+            )
 
         return state
 
@@ -143,31 +154,21 @@ class CryptoEnv:
 
     def _generate_normalizers(self):
         action_norm_vector = []
-        price_norm_vector = []
-        tech_norm_vector = []  # 8 tech indicators => 8 times size of price_norm_vector
-
         price_0 = self.price_array[0]  # price at time 0
-
         for price in price_0:
             x = len(str(int(price))) - (1 + int(math.log10(self.initial_cash)))
             action_norm = 10 ** (-x)
             action_norm_vector.append(action_norm)
-
-            y = len(str(int(price))) - 1
-            price_norm = 10 ** (-y)
-            price_norm_vector.append(price_norm)
-
-            tech_norm_vector.extend([price_norm] * 3)  # SMA * 3
-            tech_norm_vector.append(price_norm)  # MACDHist
-            tech_norm_vector.append(10**-2)  # CCI
-            tech_norm_vector.append(10**-2)  # RSI
-            tech_norm_vector.append(1)  # NATR
-            tech_norm_vector.append(10 ** (y - 6))  # ADOSC
-
         self.action_norm_vector = np.array(action_norm_vector)
-        self.price_norm_vector = np.array(price_norm_vector)
-        self.tech_norm_vector = np.array(tech_norm_vector)
-        self.cash_norm = 10 ** -int(math.log10(self.initial_cash))
+
+    # def _train_autoencoder(self):
+    #     self.auto_encoder = Autoencoder(self.state_dim, self.encoded_dim)
+    #     loss = nn.MSELoss()
+    #     optim = torch.optim.Adam(self.auto_encoder.parameters(), lr=self.lr)
+
+    #     for epoch in range(20):
+    #         for i in range()
+
 
     def _df_to_time_array(self, df):
         tic_list = df["tic"].unique()

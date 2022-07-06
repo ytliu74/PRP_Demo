@@ -96,7 +96,7 @@ class ChinaStockDownloader(object):
 
         return df
 
-    def download_fundament(self, force_download=False) -> pd.DataFrame:
+    def download_fundament(self, force_download=False, remain_statdate=False) -> pd.DataFrame:
         """Download fundamental data
          Reference: http://baostock.com/baostock/index.php/%E5%AD%A3%E9%A2%91%E6%9D%9C%E9%82%A6%E6%8C%87%E6%95%B0
 
@@ -120,6 +120,10 @@ class ChinaStockDownloader(object):
             "dupontNitogr": "Nitogr",
             "dupontTaxBurden": "TaxBurden",
         }
+
+        if remain_statdate:
+            drop_list.remove("statDate")
+            rename_dict["statDate"] = "statDate"
 
         lg = bs.login()
         stocks_iter = tqdm(self.stock_list)
