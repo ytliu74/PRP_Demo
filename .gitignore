@@ -1,5 +1,6 @@
 *.csv
 *.parquet
+*.pkl
 nohup.out
 key.py
 draft.ipynb
